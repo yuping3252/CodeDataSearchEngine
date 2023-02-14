@@ -1,0 +1,249 @@
+import traceback
+import pymssql
+import psycopg2
+from PyQt4.QtCore   import *
+from PyQt4.QtGui    import *
+from tables.tabledb import TableDB
+
+
+
+class TableData:
+    def __init__(self, conn_db, sz):
+        self.db      = conn_db
+        self.sz      = sz 
+        self.dbnm    = ""
+        self.tbl_lst = []
+        self.col_lst = []
+        self.row_lst = []
+
+        #
+        # [tblidx, tblnm, tblflg, pkcol, col_disp, col_seq, relat_tblidxs, relat_cols, relat_rows]
+        #
+        # all lists have 3 levels of containers
+        #
+        # col_disp        = [(seq, colnm), ...]   seqquence of displayed columns
+        # col_seq         = [(seq, colnm), ...]   sequence of all columns
+        # related_tblidxs = [(seq, tblidx), ...]  sequence of related tables ... could be empty
+
+
+    def get_db_tables_pk(self, dbtype, dbnm):
+        if dbtype == "SQL Server":
+            stmt = "select * from dbo.tr_pk_columns('" +  dbnm + "')" # return list of (table name, pk column name)
+        elif dbtype == "PostgreSQL":
+            stmt =  "select tc.table_name, kc.column_name \
+                     from  \
+                     information_schema.table_constraints tc, \
+                     information_schema.key_column_usage  kc  \
+                     where \
+                     tc.constraint_type = 'PRIMARY KEY'  \
+                     and kc.table_name = tc.table_name and kc.table_schema = tc.table_schema \
+                     and kc.constraint_name = tc.constraint_name \
+                     order by 1, 2;"
+
+
+        data, rows = self.db.execsql(stmt)
+        return data
+
+
+    def get_table_pk(self, tbls_pks, tblnm):                      # retrieve pk column name from (table name, pk column name)
+        _pk = -1
+        for tbl_pk in tbls_pks:
+            if tbl_pk[0] == tblnm:
+                _pk = tbl_pk[1]
+                break
+        return _pk
+
+
+    def get_tbl_col_info(self, dbnm, tblnm):
+        tblid, pkcol, pkcolid = self.get_id_pkid(dbnm, tblnm)
+        cols = self.get_tbl_collist(dbnm, tblnm)
+
+        # tbl_info_colnm = [(seq, dbnm, tblnm1, pk1_col, fk1_col, tblnm2, pk2_col, fk2_col), ...]
+        # tbl_info_colid = [(seq, dbnm, tbidx1, pk1_idx, fk1idx1, tbidx2, pk2_idx, fk2_idx, level1, leaf, chain), ...]
+        tbl_info_colnm = [0, dbnm, tblnm, pkcol,   0,  '', 0,  0]
+        tbl_info_colid = [0, dbnm, tblid, pkcolid, 0,  0,  0,  0,    0, 0, 0]    # tbl_cidx[9] = level1
+                                        # pk1      fk1 tb2 pk2 fk2      
+        return cols, tbl_info_colnm, tbl_info_colid        
+
+
+    def get_one_tbl_all_col_rows(self, dbnm, tblnm):              # give a dbnm, a tblnm, retrieve data from all cols
+        stmt = "dbo.tr_one_table_all_column_names"
+        params1 = (dbnm, tblnm)
+        self.db.execproc(stmt, params1)
+
+        stmt = "select col from tr_value_tmp_one_table_all_columns"
+        one_tbl_all_cols, rows = self.db.execsql(stmt)
+        for collist in one_tbl_all_cols:
+            collist0 = collist[0]
+            colnames = collist0.split(',')
+
+        stmt = "select * from %s.dbo.%s"
+        stmt = stmt % (dbnm , tblnm)
+        data, rows = self.db.execsql(stmt)
+        rows_ = self.sz.dsply_rows_index(data)
+        row_max, col_max, row_max_lst, col_cnt_lst = self.sz.compute_screen_rowcols([rows_], [colnames])
+        return row_max, col_max, [tblnm], [rows_], [colnames]
+
+
+    def get_one_tbl_select_cols_rows(self, dbnm, tblnm, collist): # give a tblnm, list of cols in a string
+        stmt = "select " + collist + " from " + dbnm + ".dbo." + tblnm
+        data, rows = self.db.execsql(stmt)
+        one_tbl_rows = self.sz.dsply_rows_index(data)
+        one_tbl      = [tblnm]
+        one_tbl_cols = collist.split(',')
+        one_tbl_cols = [one_tbl_cols]
+        one_tbl_rows = [one_tbl_rows]
+
+        row_max, col_max, row_max_lst, col_cnt_lst = self.sz.compute_screen_rowcols(one_tbl_rows, one_tbl_cols)
+        return row_max, col_max, one_tbl, one_tbl_rows, one_tbl_cols
+
+
+    def get_multi_tbls_all_col_rows(self, dbnm, tbl_lst): # give a list of tables, retrieve data from all cols
+        tbl_lst_all_cols     = []
+        tbl_lst_all_row_data = []
+
+        for tbl_ in tbl_lst:
+            stmt = "dbo.tr_one_table_all_column_names"
+            params1 = (dbnm, tbl_)
+            self.db.execproc(stmt, params1)
+
+            stmt = "select col from tr_value_tmp_one_table_all_columns"
+            data, rows = self.db.execsql(stmt)
+            for collist in data:
+                collist0 = collist[0]
+                one_tbl_all_cols = collist0.split(',')
+            tbl_lst_all_cols.append(one_tbl_all_cols)
+
+            stmt = "select * from %s.dbo." + tbl_
+            stmt = stmt % dbnm
+            data, rowcnt = self.db.execsql(stmt)
+            rows_ = self.sz.dsply_rows_index(data)
+
+            one_tbl_all_row_data = []
+            for row in rows_:
+                one_tbl_all_row_data.append(row)
+            tbl_lst_all_row_data.append(one_tbl_all_row_data)
+
+        row_max, col_max, row_max_lst, col_cnt_lst = self.sz.compute_screen_rowcols(tbl_lst_all_row_data, tbl_lst_all_cols)
+        return row_max, col_max, tbl_lst, tbl_lst_all_row_data, tbl_lst_all_cols
+
+
+    def get_tbls_rows(self, dbtype, dbnm, tbl_lst, col_lst):     # give a list of tables, and a list of columns (nested list)
+        self.dbnm    = dbnm
+        self.tbl_lst = tbl_lst
+        self.col_lst = col_lst
+        tbls_pks = self.get_db_tables_pk(dbtype, dbnm)
+
+        row_lst = []
+
+
+        t = 0
+        for tbl in tbl_lst:
+            _pk  = self.get_table_pk(tbls_pks, tbl)
+            cols = col_lst[t]                            # cols of t-th table
+
+            cols.reverse()
+            cols.append(_pk)
+            cols.reverse()
+
+            print("tablerelate.py,    get_tbls_rows(),  cols=", cols, "    tbl=", tbl)
+
+            stmt = "select " + ','.join(cols) + " from " + tbl
+
+            data, rownum = self.db.execsql(stmt)         # select from t-th table
+            rows_ = []
+            rows_ = self.sz.dsply_rows_index(data)
+
+            row_lst.append(rows_)                        # row_lst = [ (rows), (rows), ... ]
+            t += 1
+
+        self.row_lst = row_lst
+        row_max, col_max, row_max_lst, col_cnt_lst = self.sz.compute_screen_rowcols(row_lst, col_lst)
+        return row_max, col_max, tbl_lst, row_lst, col_lst                 # the lst column of each cols is pk
+
+
+    def get_one_db_all_tbls_rows(self, dbnm, rowlimit):  # give a dbnm, retrieve data from all tables, limited rows
+
+        stmt  = "select dbo.tr_one_db_all_tables('%s')"
+        stmt  = stmt % dbnm
+
+        data, rows = self.db.execsql(stmt)
+
+        row0  = data[0]
+        row0e = row0[0]
+        one_db_all_tbls = row0e.split(",")
+        # one_db_all_tables.remove('sysdiagrams')
+
+        one_db_all_tbl_cols = []
+        one_db_all_tbl_rows = []
+
+        for table_ in one_db_all_tbls:
+
+            stmt = "dbo.tr_one_table_all_column_names"
+            params1 = (dbnm, table_)
+
+            self.db.execproc(stmt, params1)
+
+            stmt = "select col from tr_value_tmp_one_table_all_columns"
+            data, rows = self.db.execsql(stmt)
+            for collist in data:
+                collist0 = collist[0]
+                colnames = collist0.split(',')
+                one_db_all_tbl_cols.append(colnames)
+
+            stmt = "select top " + str(rowlimit) + " * from %s.dbo." + table_
+            stmt = stmt % dbnm
+
+            data, rowcnt = self.db.execsql(stmt)
+
+            rows_ = self.sz.dsply_rows_index(data)
+            one_db_all_tbl_rows.append(rows_)
+
+        row_max, col_max, row_max_lst, col_cnt_lst = self.sz.compute_screen_rowcols(one_db_all_tbl_rows, one_db_all_tbl_cols)
+        return row_max, col_max, one_db_all_tbls, one_db_all_tbl_rows, one_db_all_tbl_cols
+
+
+    def get_id_pkid(self, dbnm, tblnm):                       # a tblnm --> a (tblid, colnm, colid)
+        tblid = 0
+        stmt  = "select distinct tblid from dbo.tr_allcols where dbnm='" + dbnm + "' and tblnm='" + tblnm + "'"
+        tblid_lst, rows = self.db.execsql(stmt)
+        for tblid_id in tblid_lst:
+            tblid = tblid_id[0]
+        pk    = 0
+        stmt  = "select distinct colnm, colid from dbo.tr_allexactnumcols where dbnm='" + dbnm + "' and tblnm='" + tblnm + "' and pkey=1"
+        colnm_colid_lst, rows = self.db.execsql(stmt)
+
+        for colnm_colid in colnm_colid_lst:
+            colnm = colnm_colid[0]
+            colid = colnm_colid[1]
+        return tblid, colnm, colid
+
+
+    def get_tbl_collist(self, dbnm, tblnm):
+        collist = ""
+        stmt = "select dbo.tr_table_collist ('" + dbnm + "','" + tblnm + "')"
+        data, rows = self.db.execsql(stmt)
+        for row in data:
+            collist = row[0]
+        return collist 
+
+
+    def compose_col_disp(self, cols_disp, cols):
+        lst_col_disp = []
+        for col1 in cols_disp:
+            seq = 0
+            for col2 in cols:
+                if col1 == col2:
+                    lst_col_disp.append((seq, col1))
+                seq += 1
+        return lst_col_disp
+
+
+    def compose_col_seq(self, cols):
+        lst_col_seq = []
+        seq = 0
+        for col in cols:
+            a = (seq, col)
+            lst_col_seq.append(a)
+        return lst_col_seq
+

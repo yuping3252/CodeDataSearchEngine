@@ -1,0 +1,80 @@
+
+
+Table_OP
+ 
+    _________________________________________________________
+    tbl_col_rows( tbl_lst, col_lst )
+
+        row_lst <-- tabledata.get_tbls_rows( tbl_lst, col_lst)
+
+        tv <-- TableView( tbl_lst, row_lst, col_lst )
+
+        dsply_basic_lsts( tbl_lst, row_lst, col_lst )
+            self.dsply_tbl_lst   <-----------
+            self.dsply_col_lst   <-----------
+            self.dsply_row_lst   <-----------
+
+        commandPush( "tbl_col_rows", "populategrid" )
+
+
+
+
+    _________________________________________________________
+    search_align_rows_op( action, r, c, txt)
+
+        tbl_lst, row_lst, col_lst <-- tablerelate.get_relate_tbl_relat_vals( table, column, value )
+
+        columnCountChanged
+
+        tbls, headers, col_grp_lst <-- setHeaders( tbl_lst, col_lst )
+                           row_lst <-- setRows( tbls, row_lst, headers, col_grp_lst )
+
+        self.dsply_aligned_tbls    <-- tbls 
+        self.dsply_aligned_cols    <-- col_grp_lst
+        self.dsply_aligned_headers <-- headers
+        self.dsply_aligned_rows    <-- row_lst
+
+        commandPush( "search_align_rows", "searchalignrows", params)
+
+
+
+
+    _________________________________________________________
+    column_clicked( action, colidx )
+
+        col_lst <-- [[column_at_colidx]]
+
+        row_lst <-- tv.setColumn( dsply_aligned_tbls
+                      row_lst                 <-- get_tbls_rows( tbl_lst, col_lst )
+                      dsply_aligned_headers
+                      dsply_aligned_cols ) 
+        
+        commandPush( "column_clicked", "columnclick", [colidx] )
+
+
+
+    recover_column_data( action, colidx ) 
+
+        commandPush( "recover_column_data", "recovercolumndata", [colidx] )
+
+
+            params.append(r)
+            params.append(col_min)
+            params.append(col_max)
+            params.append(self.dsply_text)
+            params.append(tblnm)
+            params.append(tblidx)
+            params.append(colnm)
+            params.append(colidx
+
+
+
+    back_action()
+        "searchalignrows"
+                colidx = cmdInfo.params.pop()
+                colnm  = cmdInfo.params.pop()
+                tblidx = cmdInfo.params.pop()
+                tblnm  = cmdInfo.params.pop()
+                txt    = cmdInfo.params.pop()
+                c      = cmdInfo.params.pop()
+                r      = cmdInfo.params.pop()
