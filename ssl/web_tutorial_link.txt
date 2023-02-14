@@ -1,0 +1,21 @@
+https://stackoverflow.com/questions/11255530/python-simple-ssl-socket-server
+https://stackoverflow.com/questions/26851034/opening-a-ssl-socket-connection-in-python
+https://docs.python.org/3/library/ssl.html
+
+Read the first link, and then the second, the third link is for reference only
+
+
+also, .rnd file may not be needed
+cert.pem need to be on the both sides of communication. It is a file generated 
+by running:
+
+openssl req -new -x509 -days 365 -nodes -out cert.pem -keyout cert.pem
+
+on Windows 10 or 7
+
+openssl is a downloaded program from  https://www.openssl.org
+and is installed on C:\OpenSSL-Win64\, the executable is under bin\
+
+OpenSSL is an open-source implementation of SSL and TLS protocols, written in
+C. It has Solaris, Linux, macOS, QNX, Unix, various BSD operating systems,
+OpenVMS and Microsoft Windows, System i(OS/400)
