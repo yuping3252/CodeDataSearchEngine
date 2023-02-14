@@ -1,0 +1,64 @@
+186 1637 0939 
+
+proc     tr_breadfirst_value_indiv_tbls5()  use table2arrayn() , exec tr_breadthfirst_schema_relate5(), tr_value_tmp_info   --->  tr_value_tmp_tmp_xxxx
+proc     tr_breadfirst_schema_relate5()     tr_column_cross, tr_allcols,  tr_allexactnumcols, tr_schema_columns
+         tr_breadfirst_schema_relate8() exists, use it ???
+
+------------------------------------------------
+proc tr_column_minmax_approxinum()    select min, max from a client table, update table tr_allapproxinumcols     used by tr_update_tbl_approxinum()
+proc tr_column_minmax_date()          select min, max from a client table, update table tr_alldatecols           used by tr_update_tbl_date()
+proc tr_column_minmax_exactnum()      select min, max from a client table, update table tr_allexactnumcols       used by tr_update_tbl_exactnum()
+
+
+proc dbo.tr_table_columns_key         --->   tr_allexactnumcols 
+
+------------------------------------------------ 
+
+proc dbo.tr_one_table_all_colmn_names                    ---> tr_value_tmp_one_table_all_columns
+proc dbo.tr_related_search5                              ---> tr_value_tmp_info   use proc tr_breadfirst_schema_relate5, tr_make_value_tmp5, tr_breadthfirst_value_indiv_tbls5 ???
+
+------------------------------------------------
+setup proc     tr_make_tbl_alltypecols()                            ---> create, load tr_allcols,   xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 11111111111111111
+setup proc     tr_make_tbl_4typecols()           tr_allcols         ---> create, load tr_allvarcols, tr_allexactnumcols, tr_allapproxinumcols, tr_alldatecols, xxxxxxxxx 22222222222222222
+setup proc     tr_make_fk_pk_table()             tr_allexactnumcols ---> create, load tr_fk_pk_table                                                     xxxxxxxxxxxxxxx 33333333333333333  used by setup proc     
+setup proc     tr_make_schema_columns()                             ---> create, load tr_schema_columns                      xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 44444444444444444  used by make_value_tmp7()
+setup proc     tr_update_recolid_exactnum        tr_allexactnumcols, tr_fk_pk_table ---> update tr_allexactnumcols           xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 55555555555555555  update allexactnumcols tblid2, colid2
+setup proc     tr_make_column_cross()            tr_allexactnumcols ---> create, load tr_column_cross                        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 66666666666666666  used by tr_breadthfirst_schema_relate6()
+
+exec  proc     tr_make_value_tmp7()              tr_schema_columns  ---> create tr_value_tmp_xxx, update tr_value_tmp_info   xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 77777777777777777  before each align exec
+exec  function tr_breadthfirst_schema_relate6()  tr_schema_columns, tr_column_cross, tr_allcols, tr_allexactnumcols          xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 88888888888888888  called by tr_related_value_search8()
+               tr_breadthfirst_schema_relate8()  ??? use it?
+exec  type     start_tbl_pk  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 99999999999999999
+exec  function table2arrayn()                    start_tbl_pk type                                                           xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 10 10 10 10 10 10 
+exec  function tr_make_columnlist(db, tbl)       tr_schema_columns                                                           xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 11 11 11 11 11 11
+exec  type     tbllink       xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 12 12 12 12 12 12
+exec  proc     tr_make_prefix_in_array()            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 12.1
+exec  proc     tr_breadthfirst_values7() use tbllink type, start_tbl_pk, table2arrayn(), tr_breadthfirst_schema_relate6(), tr_value_tmp_info ---> load tr_value_tmp_xxxx xxxxxxxx 13 13 13 13 13 13
+exec  proc     tr_related_value_search8()        start_tbl_pk, table2arrayn(), tr_breadthfirst_schema_relate6(), tr_make_columnlist(db, tbl), 
+                                                 tr_make_value_tmp7() , tr_breadthfirst_values7()  ---> create, load tr_value_tmp_info   xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 14 14 14 14 14 14
+exec  function tr_pk_columns()                   tr_schema_columns                                 ---> 
+
+exec  proc     tr_column_minmax_approxinum()   --> update tr_allapproxinumcols    xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 15 15 15 15 15 15   may not needed for relational search
+exec  proc     tr_column_minmax_date()         --> update tr_alldatecols          xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 16 16 16 16 16 16   may not needed for relational search
+exec  proc     tr_column_minmax_exactnum()     --> update tr_allexactnumcols      xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 17 17 17 17 17 17   may not needed for relational search
+exec  proc     tr_update_tbl_date()            tr_alldatecols,     --> exec tr_column_minmax_date()                                                xxxxxxxxxxxxxxxxxxxxx 18 18 18 18 18 18   may not needed for relational search
+
+-----------------------------------------------
+proc    tr_update_recolid_exactnum   tr_fk_pk_table                 ---> update tr_allexactnumcols                                    update columns (tblid2, colid2), where it is used ???
+proc    tr_update_tbl_approxinum     tr_allaproxinumcols            ---> exec proc tr_column_minmax_approxinum()                      tr_allapproxinumcols min max
+proc    tr_update_tbl_date           tr_alldatecols,                ---> exec tr_column_minmax_date()                                 tr_datecols          min max
+proc    tr_update_tbl_exactnum                                      ---> exec tr_column_minmax_exactnum(), update tr_allexactnumcols  tr_allexactnumcols   min max, and pkey=1 for pk column
+
+------------------------------------------------
+SELECT ROUTINE_TYPE, ROUTINE_NAME, ROUTINE_DEFINITION
+    FROM INFORMATION_SCHEMA.ROUTINES 
+	where ROUTINE_TYPE='PROCEDURE'
+    --WHERE ROUTINE_DEFINITION LIKE '%Foo%'
+    --AND ROUTINE_TYPE='PROCEDURE'
+
+
+
+additional:
+
+
+

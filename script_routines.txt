@@ -1,0 +1,1 @@
+select routine_name, routine_type, routine_definition  from tr_dev.information_schema.routines

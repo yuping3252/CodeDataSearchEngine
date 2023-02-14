@@ -1,0 +1,431 @@
+main
+
+
+    def OnToDatabase(self):
+        conn_db = ConnectDatabase(self, self.glo)
+        if conn_db.exec_() == QDialog.Accepted:    # when success, placs itself into list glo.dbconn_
+            print("mainwindow_menu.py,    OnToDatabase(),  Accepted")
+            print("mainwindow_menu.py,    OnToDatabase(),  dbnm   =", conn_db.dbnm)
+            print("mainwindow_menu.py,    OnToDatabase(),  dbtype =", conn_db.dbtype)
+
+            self.travel_db.travel_db(conn_db, self.glo)
+            for db in self.glo.db_tbl_lst_: 
+                for tbl in db: 
+                    self.query_tbl.a_query(tbl, conn_db, self.glo)       # each tbl = [ db, table, [...columns...]  ]
+
+            obj2tree = DBObject2TreeFile()
+            obj2tree.obj2treefile(self.glo)        # make a tree_db.txt fil
+
+
+conn_database
+
+        if type_ == 'SQL Server':
+            try:
+                conn_s = "Driver={SQL Server Native Client 11.0}; Server=" + serv_\
+                    + ";Port=" + port_ + "; Database=" + db_ + "; uid=" + user_ + "; pwd=" + pswd_
+                self.conn = pypyodbc.connect(conn_s)
+                self.dbtype = "SQL Server"
+                print("conn_database.py,  database_connect(),  on SQL Server \"" + serv_ + "\" at port " + port_ + ", SQL Server database \"" + db_ + "\" connected " )
+            except:
+                print("conn_database.py,  database_connect(),  on SQL Server \"" + serv_ + "\" at port " + port_ + ", SQL Server database \"" + db_ + "\" not connected ")
+
+        elif type_ == 'PostgreSQL':
+            try:
+                self.conn = psycopg2.connect(host=serv_, port=int(port_), database=db_, user=user_, password=pswd_)
+                self.dbtype = "PostgreSQL"
+                print("conn_database.py,  database_connect(),  on postgresql server \"" + serv_ + "\" at port " + port_ + ", PostgreSQL database \"" + db_ + "\" connected ")
+            except:
+                print("conn_database.py,  database_connect(),  on postgresql server \"" + serv_ + "\" at port " + port_ + ", PostgreSQL database \"" + db_ + "\" not connected ")
+        else:
+            print("Other database type")
+
+        if self.conn:
+            self.dbnm   = db_             # database name
+            self.dbtype = type_           # database type
+            self.glo.dbconn_.append(self) # connection: net output ... each of glo.dbconn_[i] is a ConnectDatabase
+
+            self.accept()
+            return True
+        else:
+            self.reject(
+
+
+
+central
+
+
+    def addTabular(self, tblnm, cursor):
+
+        num_fields  = len(cursor.description)
+        field_names = [i[0] for i in cursor.description]
+
+        print("centralareaop.py,   addTabular(),   tblnm=", tblnm, ",   field names=", field_names)
+
+        # ---------------------------------------- add a table
+        rowcnt = cursor.rowcount
+
+        print("centralareaop.py,   addTabular(),   rowcnt=", rowcnt)
+
+        table  = QTableWidget()
+        table.setRowCount(rowcnt)
+
+        # ---------------------------------------- fill table wkth values
+        data = cursor.fetchall()
+
+        tabledata = []
+        for row in data:
+            tabledata.append(row)
+
+        i = 0
+        for row in tabledata:
+            print("centralareaop.py,   addTabular(),   row=", row)
+            len_ = len(row)
+            if i == 0:
+                table.setColumnCount(len_)
+            for j in range(len(row)):
+                # print(row[j],)
+                table.setItem(i, j, QTableWidgetItem(str(row[j])))
+            i += 1
+
+        # ---------------------------------------- add one table to a tab
+        index = self.mw.tabs.addTab(table, tblnm)                                                # this seems to be a different addTab()
+        self.mw.tabs.setCurrentIndex(index
+
+
+
+displayflow
+
+
+    def tableViewData(self, central, tableItem):
+        d = 0
+        for conn in self.parent.dispflw.glo.dbconn_:
+            cursor = conn.query_table(tableItem.table)
+            print("displayflow.py,   tableViewData(),   query table, conn seq=", d)
+            if cursor: 
+                view = central.addTabular(tableItem.table, cursor)
+            d += 1
+
+
+dataflow_in_query
+
+
+    def dataflow(self, nodeid, nodelist, sqlqueryselcols, sqltrace, sqlinsertsels):
+        node_clicked = []
+        # ---------- find a node with given nodeid
+        for node in nodelist:
+            if nodeid == node[0]:
+                node_clicked = node
+                break
+        file_id     = node_clicked[4]
+
+        print("")
+        print("dataflow_in_query.py,   dataflow(),   11111111111  file_id=", file_id)
+
+        query_sqlid_list = []
+        for selcol in sqlqueryselcols:
+
+            if file_id == selcol[0]: 
+                print("dataflow_in_query.py,   dataflow(),   selcol=", selcol)
+
+            if file_id == selcol[0] and selcol[1] not in query_sqlid_list:
+                query_sqlid_list.append(selcol[1])
+
+        print("dataflow_in_query.py,   dataflow(),   22222222222  query_sqlid_list=", query_sqlid_list)
+
+        a_file_querys = []
+        for query_sqlid in query_sqlid_list:
+            [a_sql_selsrcs, a_sql_inserts3] = \
+                self.dataflow_single_query(file_id, query_sqlid, sqlqueryselcols, sqltrace, sqlinsertsels)
+
+            # print("dataflow_in_query.py,   dataflow(),   a_sql_selsrcs=", a_sql_selsrcs, ",   a_sql_inserts3=", a_sql_inserts3)
+
+            a_file_querys.append([a_sql_selsrcs, a_sql_inserts3])
+
+        links = self.datalinks(a_file_querys)
+        return a_file_querys, link
+
+
+
+
+
+sql_client\travel_db
+
+
+
+    def travel_db(self, conn_db, glo): 
+        tro = Tables_TRO()
+
+        ip          = "0.0.0.0"
+        port        = 1521
+        parent      = "database"
+        msg         = "a base table"
+        updatetime  = datetime.datetime.now()
+
+        glo.dbid    = tro.maxid_select('TR_DB',    glo.dbserver_[0]) + 1
+        glo.tableid = tro.maxid_select('TR_Table', glo.dbserver_[0]) + 1
+    
+
+        query_travel   = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_CATALOG='"
+
+        if   conn_db.dbtype == "SQL Server":  
+            query_travel += conn_db.dbnm + "'"
+
+        elif conn_db.dbtype == "PostgreSQL": 
+            query_travel += conn_db.dbnm + "' AND TABLE_SCHEMA = 'public'" 
+
+        print("travel_db.py,   db name=", conn_db.dbnm, ",   db tpe=", conn_db.dbtype, ",   query_travel=", query_travel)
+
+        cur = conn_db.conn.cursor() 
+
+        cur.execute(query_travel)
+
+        data = cur.fetchall() 
+
+        print("travel_db.py,   query success")
+        
+        tbl_lst_ = []
+        for row in data: 
+            table_ = [ glo.tableid, row[0],     glo.dbid, updatetime ]
+                   # [ table ID,    table NAME, db ID,    time       ]
+            tbl_lst_.append(table_)
+            glo.tableid += 1
+        glo.db_tbl_lst_.append(tbl_lst_)
+
+        cur.close()
+
+
+
+query_tbl
+
+
+    def a_query(self, table_, conn_db, glo): 
+
+        tblnm = table_[1]
+        cur = conn_db.conn.cursor()
+
+        if  conn_db.dbtype == "SQL Server": 
+            query = "SELECT NAME FROM SYS.COLUMNS WHERE object_id = object_id(\'" + tblnm +"\')"
+
+        elif conn_db.dbtype == "PostgreSQL":
+            query = "SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name   = '" + tblnm + "'"
+
+        cur.execute(query) 
+        data = cur.fetchall() 
+        
+        columns = []
+        for col in data: 
+            columns.append(col)
+        table_.append(columns)      # table_ = [ tableID, tableNAME, dbID, time,  [...columns...] ]
+
+        cur.close()
+
+
+
+
+sql_tool\table_column_db
+
+
+
+    def cols_(self, tablename, glo):
+
+
+        print("table_columns_db.py,   cols_(),  tablename=", tablename)
+
+        query = "select * from query_tr_sql(\'public.\"" + tablename + "\"\')"
+        try:                                                      # PostgreSQL
+            cds = glo.dbserver_[0].sqlexec(query)
+            cols = []
+            for rows in cds:
+                i = 0
+                for col in rows:
+                    if i==2:
+                        cols.append(col)
+                    i += 1
+            return cols                                           # return
+        except:
+            cds = Non
+
+
+
+
+
+db
+
+
+
+    def sqlexec(self, cmds):
+
+        cur = self.db_connect()
+
+        try:
+            if cmds.strip().startswith("select"):
+
+                cur.execute(cmds)
+                data = cur.fetchall()
+
+                cur.close()
+                return data
+            else:
+
+                cur.execute(cmds)
+                self.conn.commit()
+
+        except Exception(e):
+            print (traceback.format_exc())
+            logging.debug("sql_tool command exec error,%s",str(e))
+            self.conn.rollback()
+
+        finally:
+            cur.close(
+
+
+
+
+
+
+above: select database connection, load repository to tree, double clicking tree items, view data.
+-------------------------------------------------------------------------------------------------------------------
+below: collect directory info
+
+
+
+table_columns_db
+
+
+    def cols_(self, tablename, glo):
+
+
+        print("table_columns_db.py,   cols_(),  tablename=", tablename)
+
+        query = "select * from query_tr_sql(\'public.\"" + tablename + "\"\')"
+        try:                                                      # PostgreSQL
+            cds = glo.dbserver_[0].sqlexec(query)
+            cols = []
+            for rows in cds:
+                i = 0
+                for col in rows:
+                    if i==2:
+                        cols.append(col)
+                    i += 1
+            return cols                                           # return
+        except:
+            cds = None
+
+
+        if cds == None and glo.dbtype_[0] == "SQL Server":
+            try:                                                  # SQL Server
+                print("table_columns_db.py,   cols_(),   111 try SQL Server")
+                query = "SELECT NAME FROM SYS.COLUMNS WHERE object_id = object_id(\'" + tablename +"\')"
+                cur = glo.dbconn_[0].cursor()
+                cur.execute(query)
+                cds = cur.fetchall()
+
+                print("table_columns_db.py,   cols_(),   222 try SQL Server, cds=", cds, ",   len(cds)=", len(cds) )
+
+                cols = []
+                for row in cds: 
+
+                    print("table_columns_db.py,   cols_(),   col=", row[0])
+
+                    cols.append(row[0])
+                print("table_columns_db.py,   cols_(),   cols=", cols)
+                return cols                                       # return
+            except:
+                cds = None
+
+        if cds == None:
+            return None
+
+
+
+tracedecom_query
+
+        [querytable_list, cond_list] = self.qtb.querytable_list_(query_list,\
+                    from_list, from_alias_table_list, from_alias_alias_list, from_only_table_list, \
+                    join_list, join_table_list, join_alias_table_list, join_alias_alias_list,\
+                    join_only_table_list, where_list, join_on_list, condition_list)
+
+        table_cols_list_with_None = self.tc.table_columns_db_(querytable_list, glo)
+        table_cols_list = []
+        for tbl in table_cols_list_with_None:
+            if tbl[3]:
+                table_cols_list.append(tbl)                                          #-------- selective --------
+        
+        if len(table_cols_list) < len(table_cols_list_with_None):
+            print("tracedecom_query.py,   table_cols_list=", table_cols_list)
+            return "tracedecom_query.py,  No access to database
+
+
+
+tracedecom_sql
+
+
+
+            [insert_type_, param_, tree_ssql, query] = self.insert.insert_blocks_(stmt, 1, glo)
+
+            traced_cols = []
+            cols_their_src = []
+            if insert_type_=="insert select":
+                trace_query_result = self.trace_query.tracedecom_query_(tree, query, glo)
+
+                if type(trace_query_result) == type(""):
+                    return trace_query_result
+                [query_id, cond, traced_cols, cols_their_src, traced_sel_cols, src_traced, filter_block_list] = \
+                    trace_query_result
+
+                insert_ = self.trace_insert.tracedecom_insert_(query_id, tree_ssql, traced_sel_cols, insert_type_, param_, glo)
+            else:
+                return "SQL statement of type:  Insert into (...) values (...), skip processing for now"
+        elif sql_type[1] == "select":
+            trace_query_result = self.trace_query.tracedecom_query_(tree, tree[0][7], glo
+
+
+
+a_file_sqldecoms
+
+
+        for tree_ssql in lst_trees:
+            if tree_ssql:
+                tree_ssql = self.duplicate_remove_(tree_ssql)
+                tree_ssql = self.level_adjust.level_adjust_(tree_ssql, 1)
+                tree_ssql = self.jo_blocks.join_on_blocks_(tree_ssql, glo)
+                if not tree_ssql or type(tree_ssql) == type(""):
+                    return tree_ssql
+                tree_ssql = self.level_adjust.level_adjust_(tree_ssql, 1)
+                tree_ssql = self.conditions.conditions_(tree_ssql, glo)
+                tree_ssql = self.fblocks.from_cut_short_(tree_ssql)
+                tree_ssql = self.srctables.sourcetbls_(tree_ssql, "from", glo)
+                tree_ssql = self.srctables.sourcetbls_(tree_ssql, "join table", glo)
+
+                # ------------------ store a single sql to database --------------------------
+
+                tree_ssql = self.trace_sql.tracedecom_sql_(tree_ssql, glo
+
+
+
+travel_dir
+
+
+        for file_ in filelist:
+            suffix = file_[5]
+            if suffix == 'sql':
+
+                glo.fileid   = file_[0]
+                sqlcontent   = file_[8]
+                sqlobj       = SqlDecom()                # SQL decomposition root
+
+
+                print("travel_dir.py,   build_sqllist(), file_[7]=", file_[7])
+
+                sql_decom_list = sqlobj.a_file_sqldecoms_(sqlcontent, glo)
+
+                print("")
+                print("")
+
+                if sql_decom_list:
+                    if type(sql_decom_list) == type([]):
+                        sqllist.extend(sql_decom_list)
+                    elif type(sql_decom_list) == type("xxx"):
+                        file_[9] = str(sql_decom_list)
+        data_store_db_("public.TR_File", filelist, glo)
+        data_store_db_("public.TR_SQL",  sqllist,  glo
