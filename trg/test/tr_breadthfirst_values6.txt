@@ -1,0 +1,123 @@
+USE [tr_dev]
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER procedure [dbo].[tr_breadthfirst_values]
+    @dbnm  varchar(300),
+	@tblnm varchar(300),
+	@colnm varchar(300),
+	@vlist varchar(max)
+as
+begin
+
+declare @dbv   varchar(300),
+        @dbnm1 varchar(300),@tblnm1 varchar(300),@colnm1 varchar(300),     @dbnm2 varchar(300),@tblnm2 varchar(300),@colnm2 varchar(300),
+        @dbnm3 varchar(300),@tblnm3 varchar(300),@colnm3 varchar(300),     @dbnm4 varchar(300),@tblnm4 varchar(300),@colnm4 varchar(300),
+		@dbnm5 varchar(300),@tblnm5 varchar(300),@colnm5 varchar(300),
+		@tblid1 int,@colid1 int,    @tblid2 int,@colid2 int,    @tblid3 int,@colid3 int,    @tblid4 int,@colid4 int,    @tblid5 int,@colid5 int,   
+		@id int, @level1 int, @leaf int
+
+declare @tbl as tbllink
+insert into @tbl
+select * from [dbo].[tr_breadthfirst_schema_relate6](@dbnm,@tblnm,@colnm) order by colnm1, level1     ---- load search links, @tbl 23 fields
+
+-- fkcols
+declare @fkcols table(rowcnt int not null identity(0,1), dbnm1 varchar(300), tblnm1 varchar(300), colnm1 varchar(300))
+insert into @fkcols   select distinct dbnm1, tblnm1, colnm1 from @tbl 
+                      order by dbnm1, tblnm1, colnm1  ---- load fk columns, fkcols 4 fields (row, db, tbl, col)
+                      
+declare @chain int, @rows1 int, @rows2 int
+set @chain = 0
+set @rows1 = (select count(*) from @fkcols)                                                           ---- number of foreign key columns
+
+declare @collists table( cols varchar(1000),  pk1_ varchar(300),  fk1_ varchar(300),  pk2_ varchar(300))
+declare                 @cols varchar(1000), @pk1_ varchar(300), @fk1_ varchar(300), @pk2_ varchar(300)
+declare @rowcnts table(n int)
+declare @rowcnt1 int, @rowcnt2 int
+set @rowcnt2 = 0
+
+declare @value_tmp_xxxx varchar(300), @last_value_tmp_xxxx varchar(300), @last_colnm2 varchar(300), @last_colnm3 varchar(300), @last_colnm5 varchar(300)
+declare @stmt varchar(1000), @stmt1 varchar(1000)
+declare @constraint_vlist  start_tbl_pk, @constraint_values varchar(2000), @cnt2 int
+
+
+--create table ttt2 (v varchar(1000))
+
+while @chain < @rows1
+begin
+    select @dbnm1=dbnm1, @tblnm1=tblnm1, @colnm1=colnm1 from @fkcols where rowcnt=@chain                     ---- one fk name @colnm1, start a chain
+    
+	set @cnt2 = 0
+	select @rows2=count(*) from @tbl where dbnm1=@dbnm1 and tblnm1=@tblnm1 and colnm1=@colnm1                ---- chain length
+
+	select @dbnm2=dbnm2, @tblnm2=tblnm2, @colnm2=colnm2,       @dbnm3=dbnm3, @tblnm3=tblnm3, @colnm3=colnm3,
+	       @dbnm4=dbnm4, @tblnm4=tblnm4, @colnm4=colnm4,       @dbnm5=dbnm5, @tblnm5=tblnm5, @colnm5=colnm5
+	from @tbl where dbnm1=@dbnm1 and tblnm1=@tblnm1 and colnm1=@colnm1 and level1=@cnt2                      ---- a chain, 1st row, --> one table's pk, fk column names
+
+	set @stmt = 'select ' + @colnm3 + ' from ' + @dbnm + '.dbo.' + @tblnm + ' where ' + @colnm2 + ' in (' + @vlist + ')'   -- pk in (......) --> fk's values statement
+
+	delete from @constraint_vlist
+	insert into @constraint_vlist
+	exec(@stmt)
+
+	select @constraint_values =dbo.table2arrayn(@constraint_vlist)                                           ---- fk's values
+
+	while @cnt2 < @rows2
+	begin
+	    select @dbnm2=dbnm2, @tblnm2=tblnm2, @colnm2=colnm2,       @dbnm3=dbnm3, @tblnm3=tblnm3, @colnm3=colnm3,      
+		       @dbnm4=dbnm4, @tblnm4=tblnm4, @colnm4=colnm4,       @dbnm5=dbnm5, @tblnm5=tblnm5, @colnm5=colnm5
+		from @tbl where dbnm1=@dbnm1 and tblnm1=@tblnm1 and colnm1=@colnm1 and level1=@cnt2                  ---- pk, fk column names, for each row in this chain
+
+		set @value_tmp_xxxx = 'tr_value_tmp_' + @colnm2 + '_' + @tblnm4                                  ---- that related table's value will be --> tr_value_tmp_xxxx
+		set @stmt1 = 'delete from ' + @value_tmp_xxxx                                                        ---- clean up                               tr_value_tmp_xxxx
+		exec(@stmt1)
+
+		set @stmt  = 'select collist, pk1_, fk1_, pk2_ from tr_value_tmp_info where table_v_tmp = ''' + @value_tmp_xxxx + ''''
+
+		delete from @collists
+		insert into @collists                                                                                ---- one row from tr_value_tmp_info --> @collists
+		exec(@stmt)
+
+		set @cols = (select distinct cols from @collists)                                                    ---- column list for select clause, select data from t2
+		set @pk1_ = (select distinct pk1_ from @collists)                                                    ---- pk of t1                     , constrained by t1
+		set @fk1_ = (select distinct fk1_ from @collists)                                                    ---- fk of t1 (@dbnm3)
+		set @pk2_ = (select distinct pk2_ from @collists)                                                    ---- pk of t2 (@dbnm4)
+
+		--------------- actual data be inserted into value_tmp_xxxx table  ----------------
+		delete from @rowcnts
+		set @stmt = 'select count(*) from ' + @dbnm4 + '.dbo.' + @tblnm4
+		insert into @rowcnts  
+		exec(@stmt)
+		set @rowcnt1 = (select n from @rowcnts)                                                              ---- @dbnm4 number of rows
+		if @rowcnt1 > @rowcnt2 set @rowcnt2=@rowcnt1                                                         ---- maximum number of rows, not used for now
+
+		if @cnt2 = 0
+		    set @stmt = 'insert into ' + @value_tmp_xxxx + 
+			            ' select '+ @cols   + ', t3.' + @colnm2 + ' as ' + @colnm2 + '_pk1, t3.' + @colnm3 + ' as ' + @colnm3 + '_fk1, t4.' +  @colnm4 + ' as ' + @colnm4 + '_pk2, t4.' + @colnm5 + ' as ' + @colnm5 + '_fk2 ' + 
+						' from '  + @dbnm4  + '.dbo.' + @tblnm4 + ' t4 ' +
+					    ' join '  + @dbnm   + '.dbo.' + @tblnm  + ' t3 ' +
+					    ' on t4.' + @colnm4 + '= t3.' + @colnm3 + '' +
+			            ' where t3.' + @colnm3 + ' in (' + @constraint_values + ')'
+		else
+		    set @stmt = 'insert into ' + @value_tmp_xxxx + 
+			            ' select '+ @cols   + ', t3.' + @last_colnm2 + '_pk1, t3.' + @last_colnm3 + '_fk1, t4.'+ @colnm4 + ' as ' + @colnm4 + '_pk2, t4.' + @colnm5 + ' as ' + @colnm4 + '_fk2 ' + 
+						' from '  + @dbnm4  + '.dbo.' + @tblnm4 + ' t4 ' +
+						' join  ' + @last_value_tmp_xxxx + ' t3 ' +
+						' on t4.' + @colnm4 + '=t3.'  + @last_colnm5 + '_fk2'
+
+        --insert into ttt2 select @stmt
+
+		exec(@stmt)
+
+		set @last_value_tmp_xxxx = @value_tmp_xxxx
+		set @last_colnm2 = @colnm2
+		set @last_colnm3 = @colnm3
+		set @last_colnm5 = @colnm5
+		set @cnt2 = @cnt2 + 1
+	end
+    set @chain = @chain + 1
+end
+end

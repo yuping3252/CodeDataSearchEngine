@@ -1,0 +1,35 @@
+
+
+self.tr_treetables = "CREATE TABLE f not exists public.\"TR_TreeTables\"    \
+( nodeid integer,                         \
+  nodeparentid integer,                   \
+  linkmethod integer,                     \
+  serverid integer,                       \
+  dbid integer,                           \
+  tableid integer,                        \
+  lastupdate timestamp without time zone) \
+WITH (OIDS=FALSE);                        \
+ALTER TABLE public.\"TR_TreeTables\" OWNER TO postgres; \
+COMMENT ON TABLE public.\"TR_TreeTables\"               \
+ IS \'TreeTables stores the result of the first scan of the entire database system, which may contains multiple databases reside on multiple servers.\';    \
+COMMENT ON COLUMN public.\"TR_TreeTables\".nodeid       IS \'NodeID is auto generated, globally unique integers that used to unique identify each node.\';  \
+COMMENT ON COLUMN public.\"TR_TreeTables\".nodeparentid IS \'NodeParentID is the NodeID of the parent node of this nodei, which is identified by NodeID\';  \
+COMMENT ON COLUMN public.\"TR_TreeTables\".linkmethod   IS \'LinkMethod contain the relationship between NodeParentID and NodeID, such as DB-Table, Server-DB, etc.\';\
+COMMENT ON COLUMN public.\"TR_TreeTables\".serverid     IS \'ServerID is the ID of a server\';   \
+COMMENT ON COLUMN public.\"TR_TreeTables\".dbid         IS \'DBID is the ID of the database\';   \
+COMMENT ON COLUMN public.\"TR_TreeTables\".tableid      IS \'TableID is the ID of the table\';   \
+COMMENT ON COLUMN public.\"TR_TreeTables\".lastupdate   IS \'LastUpdate is the date of the last update transaction for this table\';"
+
+
+
+
+
+
+
+
+
+
+
+
+
+

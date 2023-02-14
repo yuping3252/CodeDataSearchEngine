@@ -1,0 +1,203 @@
+USE [tr_dev]
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER procedure [dbo].[tr_breadthfirst_values]
+    @dbnm  varchar(300),
+	@tblnm varchar(300),
+	@colnm varchar(300),
+	@vlist varchar(max)
+as
+begin
+
+declare @dbv   varchar(300),
+        @dbnm1 varchar(300),@tblnm1 varchar(300),@colnm1 varchar(300),     @dbnm2 varchar(300),@tblnm2 varchar(300),@colnm2 varchar(300),
+        @dbnm3 varchar(300),@tblnm3 varchar(300),@colnm3 varchar(300),     @dbnm4 varchar(300),@tblnm4 varchar(300),@colnm4 varchar(300),
+		@dbnm5 varchar(300),@tblnm5 varchar(300),@colnm5 varchar(300),
+		@tblid1 int,@colid1 int,    @tblid2 int,@colid2 int,    @tblid3 int,@colid3 int,    @tblid4 int,@colid4 int,    @tblid5 int,@colid5 int,   
+		@id int, @level1 int, @leaf int
+
+declare @tbl as tbllink
+insert into @tbl
+select * from [dbo].[tr_breadthfirst_schema_relate6](@dbnm,@tblnm,@colnm) order by colnm1, level1     ---- load search links, @tbl 23 fields
+
+--select * from @tbl
+--return
+
+-- load fkcols,  tblnm1 is the table that search starts, colnm1 contains distinct first level foreign keys, in tblnm1
+declare @fkcols table(rowcnt int not null identity(0,1), dbnm1 varchar(300), tblnm1 varchar(300), colnm1 varchar(300))
+insert into @fkcols   select distinct dbnm1, tblnm1, colnm1 
+                      from @tbl 
+                      order by dbnm1, tblnm1, colnm1  ---- load fkcols (rowcnt, db, tbl, col)
+                      
+declare @chain int, @numchains int, @chainlength int
+set @chain = 0
+set @numchains = (select count(*) from @fkcols)       ---- num of first level foreign keys, num of chains
+
+declare @collists table( cols varchar(1000),  pk1_ varchar(300),  fk1_ varchar(300),  pk2_ varchar(300))   ---------- foreign keys
+declare                 @cols varchar(1000), @pk1_ varchar(300), @fk1_ varchar(300), @pk2_ varchar(300)
+declare @rowcnts table(n int)
+declare @rowcnt1 int, @rowcnt2 int
+set @rowcnt2 = 0
+
+-- @tbl table
+--(dbnm1,tblnm1,colnm1,
+-- dbnm2,tblnm2,colnm2,
+-- dbnm3,tblnm3,colnm3,
+-- dbnm4,tblnm4,colnm4,
+-- dbnm5,tblnm5,colnm5,
+-- tblid1,colid1,
+-- tblid2,colid2,
+-- tblid3,colid3,
+-- tblid4,colid4,
+-- tblid5,colid5, 
+-- level1, leaf, chain)
+
+-- about @tbl
+-- tblnm1  --> tblnm2 are related by 0 or more foreign keys eventually, at level 0 row, tblnm1 == tblnm2
+-- tblnm2  == tblnm3
+-- tblnm3  --> tblnm4 are related by foreign keys (one hoop)
+-- tblnm4  == tblnm5
+
+-- colnm1  --> colnm2 are related by 0 or more foreign keys eventually, colnm1 is fk in tblnm1, colnm2 is pk in tblnm2, at level 0, tblnm1==tblnm2
+-- colnm2  --> colnm3 are in the same table, from pk to one fk                                  colnm3 is fk in tblnm2 and tblnm3,  tblnm2==tblnm3
+-- colnm3  --> colnm4 are related by foreign keys                                               colnm4 is pk in tblnm4,
+-- colnm4  --> colnm5 are in the same table, from pk to one fk,         except at top level row, colnm5 is fk in tblnm5, except at top level
+
+declare @value_tmp_xxxx varchar(300), @last_value_tmp_xxxx varchar(300), @last_colnm4 varchar(300), @last_colnm5 varchar(300)
+declare @stmt varchar(1000), @stmt1 varchar(1000)
+declare @constraint_vlist  start_tbl_pk, @constraint_values varchar(2000), @cnt2 int
+declare @rowcnt table(v int)
+declare @v int
+
+
+while @chain < @numchains                                                                                    ---- loop over each chain of 1st level foreign keys
+begin
+    select @dbnm1=dbnm1, @tblnm1=tblnm1, @colnm1=colnm1 from @fkcols where rowcnt=@chain                     ---- one fk name @colnm1, start a chain  
+	set @cnt2 = 0
+	select @chainlength=count(*) from @tbl where dbnm1=@dbnm1 and tblnm1=@tblnm1 and colnm1=@colnm1      ---- chain length
+
+	while @cnt2 < @chainlength
+	begin
+	    ------------- schema: obtain all related table and column names
+	    select @colnm2=colnm2, @tblnm4=tblnm4
+		from @tbl where dbnm1=@dbnm1 and tblnm1=@tblnm1 and colnm1=@colnm1 and level1=@cnt2    ---- pk, fk column names, for each row in this chain
+
+		------------- clean up all tr_value_tmp_xxxx tables
+		set @value_tmp_xxxx = 'tr_value_tmp_' + @colnm2 + '_' + @tblnm4  ---- that related table's value will be --> tr_value_tmp_xxxx
+		set @stmt1 = 'truncate table ' + @value_tmp_xxxx                 ---- clean up                               tr_value_tmp_xxxx
+
+		--select @stmt1
+		exec(@stmt1)
+		set @cnt2 = @cnt2 + 1
+	end
+    set @chain = @chain + 1
+end
+
+
+set @chain = 0
+
+while @chain < @numchains                                                                                    ---- loop over each chain of 1st level foreign keys
+begin
+    select @dbnm1=dbnm1, @tblnm1=tblnm1, @colnm1=colnm1 from @fkcols where rowcnt=@chain                     ---- one fk name @colnm1, start a chain    
+	set @cnt2 = 0
+	select @dbnm2=dbnm2, @tblnm2=tblnm2, @colnm2=colnm2,       @dbnm3=dbnm3, @tblnm3=tblnm3, @colnm3=colnm3,
+	       @dbnm4=dbnm4, @tblnm4=tblnm4, @colnm4=colnm4,       @dbnm5=dbnm5, @tblnm5=tblnm5, @colnm5=colnm5, @chain = chain
+	from @tbl where dbnm1=@dbnm1 and tblnm1=@tblnm1 and colnm1=@colnm1 and level1=@cnt2    ---- a chain, 1st row, --> one table's pk, fk column names
+
+	-- select fks --> @colnm3
+	set @stmt = 'select ' + @colnm3 + ' from ' + @dbnm + '.dbo.' + @tblnm + ' where ' + @colnm2 + ' in (' + @vlist + ')'
+
+	---------------------------------------------------------------------------------------------------------------
+	--select @stmt
+
+	delete from @constraint_vlist
+	insert into @constraint_vlist
+	exec(@stmt)
+
+	select @constraint_values =dbo.table2arrayn(@constraint_vlist)                                       ---- fk's values
+
+	--select @constraint_values
+
+	select @chainlength=count(*) from @tbl where dbnm1=@dbnm1 and tblnm1=@tblnm1 and colnm1=@colnm1      ---- chain length
+
+	while @cnt2 < @chainlength
+	begin
+	    ------------- schema: obtain all related table and column names
+	    select @dbnm2=dbnm2, @tblnm2=tblnm2, @colnm2=colnm2,       @dbnm3=dbnm3, @tblnm3=tblnm3, @colnm3=colnm3,      
+		       @dbnm4=dbnm4, @tblnm4=tblnm4, @colnm4=colnm4,       @dbnm5=dbnm5, @tblnm5=tblnm5, @colnm5=colnm5
+		from @tbl where dbnm1=@dbnm1 and tblnm1=@tblnm1 and colnm1=@colnm1 and level1=@cnt2    ---- pk, fk column names, for each row in this chain
+
+		set @value_tmp_xxxx = 'tr_value_tmp_' + @colnm2 + '_' + @tblnm4  ---- that related table's value will be --> tr_value_tmp_xxxx
+
+		------------- schema:
+		------------- @collists table( cols varchar(1000),  pk1_ varchar(300),  fk1_ varchar(300),  pk2_ varchar(300))
+		set @stmt  = 'select distinct collist, pk1_, fk1_, pk2_  from tr_value_tmp_info  where table_v_tmp = ''' + @value_tmp_xxxx + ''''
+		              + ' and chain = ' + cast(@chain as varchar)
+		delete from @collists
+		insert into @collists                                            ---- one row from tr_value_tmp_info --> @collists
+		exec(@stmt)
+
+		-------------------------------------------------------------------------------------------------------------
+		--select 'collists=', * from @collists
+
+		------------- @cols varchar(1000), @pk1_ varchar(300), @fk1_ varchar(300), @pk2_ varchar(300)
+		set @cols = (select distinct cols from @collists)                                      ---- column list for select clause, select data from t2
+		--set @pk1_ = (select distinct pk1_ from @collists)                                      ---- pk of t1,                      constrained by t1
+		--set @fk1_ = (select distinct fk1_ from @collists)                                      ---- fk of t1 (@dbnm3)
+		--set @pk2_ = (select distinct pk2_ from @collists)                                      ---- pk of t2 (@dbnm4)
+
+		--------------- actual data be inserted into value_tmp_xxxx table  ----------------
+		delete from @rowcnts
+		set @stmt = 'select count(*) from ' + @dbnm4 + '.dbo.' + @tblnm4
+		insert into @rowcnts  
+		exec(@stmt)
+		set @rowcnt1 = (select n from @rowcnts)                                                              ---- @dbnm4 number of rows
+		if @rowcnt1 > @rowcnt2 set @rowcnt2=@rowcnt1                                                         ---- maximum number of rows, not used for now
+
+        --declare @pref table  (pre varchar(1200))
+
+        --insert into @pref exec tr_make_prefix_in_array 't3',@cols
+        --set @cols = (select top 1 * from @pref)
+        -- select @cols
+
+		if @cnt2 = 0
+		    set @stmt = 'insert into ' + @value_tmp_xxxx + 
+			            ' select distinct '+ @cols   + ', t3.' + @colnm2 + ' as ' + @colnm2 + '_pk1, t3.' + @colnm3 + ' as ' + @colnm3 + '_fk1, t4.' +  @colnm4 + ' as ' + @colnm4 + '_pk2, t4.' + @colnm5 + ' as ' + @colnm5 + '_fk2, ' + cast(@chain as varchar) + ' as chain ' +
+						' from '  + @dbnm4  + '.dbo.' + @tblnm4 + ' t4 ' +
+					    ' join '  + @dbnm   + '.dbo.' + @tblnm  + ' t3 ' +
+					    ' on t4.' + @colnm4 + '= t3.' + @colnm3 + '' +
+			            ' where t3.' + @colnm3 + ' in (' + @constraint_values + ')'
+		else
+		    set @stmt = 'insert into ' + @value_tmp_xxxx + 
+			            ' select distinct '+ @cols   + ', t3.' + @last_colnm4 + '_pk2 as ' + @last_colnm4 + '_pk1, t3.' + @last_colnm5 + '_fk2 as ' + @last_colnm5 + '_fk1, t4.'+ @colnm4 + ' as ' + @colnm4 + '_pk2, t4.' + @colnm5 + ' as ' + @colnm4 + '_fk2, ' + cast(@chain as varchar) + ' as chain ' +
+						' from '  + @dbnm4  + '.dbo.' + @tblnm4 + ' t4 ' +
+						' join  ' + @last_value_tmp_xxxx + ' t3 ' +
+						' on t4.' + @colnm4 + '=t3.'  + @last_colnm5 + '_fk2'
+		-------------------------------------------------------------------------------------------------------------
+
+		insert into @rowcnt
+		exec('select count(*) as v from ' + @value_tmp_xxxx)
+		set @v = (select top 1 v from @rowcnt)
+		if @v = 0
+		begin
+		    --select @stmt
+		    exec(@stmt)
+		end
+
+		delete from @rowcnt
+
+		-------------------------------------------------------------------------------------------------------------
+
+		set @last_value_tmp_xxxx = @value_tmp_xxxx
+		set @last_colnm4 = @colnm4
+		set @last_colnm5 = @colnm5
+		set @cnt2 = @cnt2 + 1
+	end
+    set @chain = @chain + 1
+end
+end
+

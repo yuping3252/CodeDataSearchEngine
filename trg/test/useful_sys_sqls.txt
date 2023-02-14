@@ -1,0 +1,99 @@
+SELECT *
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name   = 'TR_SQL'
+
+select pg_get_functiondef('inc'::regproc);
+select proname,prosrc from pg_proc where proname= 'inc';
+SELECT
+    routine_definition
+FROM
+    information_schema.routines
+WHERE
+    specific_schema LIKE 'public'
+    AND routine_name LIKE 'inc';
+
+select oid, proname, prolang, prosrc
+from pg_proc
+where proname = 'inc'
+
+SELECT attrelid::regclass, attnum, attname FROM pg_attribute WHERE attrelid = 'public."TR_SQL"'::regclass AND attnum > 0 AND NOT attisdropped ORDER BY attnum;
+SELECT * FROM pg_attribute;
+
+SELECT * FROM information_schema.columns WHERE table_schema = 'public' AND table_name   = 'TR_SQL'
+
+
+
+
+SELECT *
+FROM information_schema.foreign_tables
+WHERE foreign_table_schema = 'public'
+  AND foreign_table_name   = 'TR_SQL'
+
+
+SELECT attrelid::regclass, attnum, attname
+FROM   pg_attribute
+WHERE  attrelid = 'public."TR_SQL"'::regclass
+AND    attnum > 0
+AND    NOT attisdropped
+ORDER  BY attnum;
+
+
+SELECT routines.routine_name, parameters.data_type, parameters.ordinal_position
+FROM information_schema.routines
+    JOIN information_schema.parameters ON routines.specific_name=parameters.specific_name
+WHERE routines.specific_schema='public'
+ORDER BY routines.routine_name, parameters.ordinal_position;
+
+
+SELECT format('%I.%I(%s)', ns.nspname, p.proname, oidvectortypes(p.proargtypes))
+FROM pg_proc p INNER JOIN pg_namespace ns ON (p.pronamespace = ns.oid)
+WHERE ns.nspname = 'public';
+
+
+SELECT  p.proname
+FROM    pg_catalog.pg_namespace n
+JOIN    pg_catalog.pg_proc p
+ON      p.pronamespace = n.oid
+WHERE   n.nspname = 'public'
+
+SELECT  proname, prosrc
+FROM    pg_catalog.pg_namespace n
+JOIN    pg_catalog.pg_proc p
+ON      pronamespace = n.oid
+WHERE   nspname = 'public';
+
+SELECT ltrim(prosrc, E'\x0a') FROM pg_proc WHERE proname = 'inc';
+SELECT prosrc FROM pg_proc WHERE proname = 'inc';
+
+SELECT  proname, proargnames, prosrc
+FROM    pg_catalog.pg_namespace n
+JOIN    pg_catalog.pg_proc p
+ON      pronamespace = n.oid
+WHERE   nspname = 'public';
+
+
+
+SELECT  p.proname
+FROM    pg_catalog.pg_namespace n
+JOIN    pg_catalog.pg_proc p
+ON      p.pronamespace = n.oid
+WHERE   n.nspname = 'public'
+
+
+select pg_get_functiondef('insert_person'::regproc);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

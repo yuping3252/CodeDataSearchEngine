@@ -1,0 +1,52 @@
+USE [tr_dev]
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER procedure [dbo].[tr_breadthfirst_values]
+    @dbnm  varchar(300),
+	@tblnm varchar(300),
+	@colnm varchar(300),
+	@vlist varchar(max)
+as
+begin
+
+declare @dbv   varchar(300),
+        @dbnm1 varchar(300),@tblnm1 varchar(300),@colnm1 varchar(300),     @dbnm2 varchar(300),@tblnm2 varchar(300),@colnm2 varchar(300),
+        @dbnm3 varchar(300),@tblnm3 varchar(300),@colnm3 varchar(300),     @dbnm4 varchar(300),@tblnm4 varchar(300),@colnm4 varchar(300),
+		@dbnm5 varchar(300),@tblnm5 varchar(300),@colnm5 varchar(300),
+		@tblid1 int,@colid1 int,    @tblid2 int,@colid2 int,    @tblid3 int,@colid3 int,    @tblid4 int,@colid4 int,    @tblid5 int,@colid5 int,   
+		@id int, @level1 int, @leaf int
+
+declare @tbl as tbllink
+insert into @tbl
+select * from [dbo].[tr_breadthfirst_schema_relate6](@dbnm,@tblnm,@colnm) order by colnm1, level1     ---- load search links, @tbl 23 fields
+
+-- fkcols
+declare @fkcols table(rowcnt int not null identity(0,1), dbnm1 varchar(300), tblnm1 varchar(300), colnm1 varchar(300))
+insert into @fkcols   select distinct dbnm1, tblnm1, colnm1 from @tbl 
+                      order by dbnm1, tblnm1, colnm1  ---- load fk columns, fkcols 4 fields (row, db, tbl, col)
+                      
+declare @chain int, @rows1 int, @rows2 int
+set @chain = 0
+set @rows1 = (select count(*) from @fkcols)                                                           ---- number of foreign key columns
+
+declare @collists table( cols varchar(1000),  pk1_ varchar(300),  fk1_ varchar(300),  pk2_ varchar(300))
+declare                 @cols varchar(1000), @pk1_ varchar(300), @fk1_ varchar(300), @pk2_ varchar(300)
+declare @rowcnts table(n int)
+declare @rowcnt1 int, @rowcnt2 int
+set @rowcnt2 = 0
+set @rowcnt2 = 0
+set @rowcnt2 = 0
+set @rowcnt2 = 0
+set @rowcnt2 = 0
+set @rowcnt2 = 0
+declare @tbl as tbllink
+insert into @tbl
+select * from [dbo].[tr_breadthfirst_schema_relate6](@dbnm,@tblnm,@colnm) order by colnm1, level1  
+
+-- fkcols
+declare @fkcols table(rowcnt int not null identity(0,1), dbnm1 varchar(300), tblnm1 varchar(300), colnm1 varchar(300))
+insert into @fkcols   select distinct dbnm1, tblnm1, colnm1 from @tbl 

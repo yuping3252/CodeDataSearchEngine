@@ -1,0 +1,25 @@
+delete from "TRO_MaxID";
+
+insert into "TRO_MaxID" (idname, idvaluemax) values('NodeID', 0);
+insert into "TRO_MaxID" (idname, idvaluemax) values('FileID', 0);
+insert into "TRO_MaxID" (idname, idvaluemax) values('ServerID', 0);
+insert into "TRO_MaxID" (idname, idvaluemax) values('DBID', 0);
+insert into "TRO_MaxID" (idname, idvaluemax) values('TableID', 0);
+insert into "TRO_MaxID" (idname, idvaluemax) values('ColumnID', 0);
+insert into "TRO_MaxID" (idname, idvaluemax) values('StoredProcID', 0);
+insert into "TRO_MaxID" (idname, idvaluemax) values('SearchID', 0);
+insert into "TRO_MaxID" (idname, idvaluemax) values('SearchConditionID', 0);
+insert into "TRO_MaxID" (idname, idvaluemax) values('StartItemID', 0);
+insert into "TRO_MaxID" (idname, idvaluemax) values('ChainID', 0);
+insert into "TRO_MaxID" (idname, idvaluemax) values('CaseID', 0);
+insert into "TRO_MaxID" (idname, idvaluemax) values('DisplayID', 0);
+insert into "TRO_MaxID" (idname, idvaluemax) values('DisplayCoordinateID', 0);
+insert into "TRO_MaxID" (idname, idvaluemax) values('ClusterID', 0);
+insert into "TRO_MaxID" (idname, idvaluemax) values('SubSystemID', 0);
+insert into "TRO_MaxID" (idname, idvaluemax) values('BlockID', 0);
+insert into "TRO_MaxID" (idname, idvaluemax) values('CmmnCategoryID', 0);
+insert into "TRO_MaxID" (idname, idvaluemax) values('CmmnTermID', 0);
+insert into "TRO_MaxID" (idname, idvaluemax) values('TechCategoryID', 0);
+insert into "TRO_MaxID" (idname, idvaluemax) values('TechTermID', 0);
+insert into "TRO_MaxID" (idname, idvaluemax) values('OwnerID', 0);
+ 
